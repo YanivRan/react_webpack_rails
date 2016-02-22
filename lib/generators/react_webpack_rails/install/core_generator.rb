@@ -13,6 +13,7 @@ module ReactWebpackRails
       def base
         copy_file '.babelrc', '.babelrc'
         create_file 'app/assets/javascripts/react_bundle.js'
+        require_bundles_in_application_js
         template 'react/index.js', 'app/react/index.js'
       end
 
@@ -41,6 +42,31 @@ module ReactWebpackRails
         copy_file 'webpack.config.js', 'webpack.config.js'
         copy_file 'webpack/dev.config.js', 'webpack/dev.config.js'
         copy_file 'webpack/production.config.js', 'webpack/production.config.js'
+      end
+
+      private
+
+      def require_bundles_in_application_js
+        manifest_file = Dir.glob("app/assets/javascripts/application.*").first
+
+        case File.extname(manifest_file)
+        when '.coffee'
+          requires = <<-REQUIRE_STRING.strip_heredoc
+            #= require react_integration
+            #= require react_bundle
+          REQUIRE_STRING
+
+          inject_into_file manifest_file, requires, before: '#= require_tree .'
+          append_to_file manifest_file, requires
+        else
+          requires = <<-REQUIRE_STRING.strip_heredoc
+            //= require react_integration
+            //= require react_bundle
+          REQUIRE_STRING
+
+          inject_into_file manifest_file, requires, before: '//= require_tree .'
+          append_to_file manifest_file, requires
+        end
       end
     end
   end
